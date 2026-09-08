@@ -1,0 +1,122 @@
+LTspice 24.1.4 for Windows
+Circuit: C:\Users\Jorge Gonzalez\Desktop\EEG Project\08 SImulations\LTSpice\Simulation v3\eeg_inamp_testbench_v3.cir
+Start Time: Thu Jul  2 12:16:57 2026
+Options: plotwinsize = 0  MAXSTEP    = 125u  ABSTOL     = 1e-9  VNTOL      = 1e-6  RELTOL     = 0.001  GMIN       = 1e-9
+solver = Normal
+Maximum thread count: 16
+tnom = 27
+temp = 27
+method = trap
+gmin = 1e-09
+abstol = 1e-09
+Direct Newton iteration failed to find .op point.  (Use ".option noopiter" to skip.)
+Starting Gmin stepping
+Gmin = 10
+Gmin = 1.07374
+Gmin = 0.115292
+Gmin = 0.0123794
+vernier = 0.5
+vernier = 0.25
+vernier = 0.125
+Gmin = 0.00723081
+vernier = 0.166667
+Gmin = 0.00500447
+vernier = 0.222222
+vernier = 0.296296
+Gmin = 0.00271853
+vernier = 0.395061
+vernier = 0.197531
+vernier = 0.0987653
+vernier = 0.0493827
+Gmin = 0.00221822
+vernier = 0.0246913
+vernier = 0.0123457
+vernier = 0.00617283
+vernier = 0.00308642
+Gmin = 0.00220121
+vernier = 0.00154321
+vernier = 0.00205761
+Gmin = 0.00219302
+vernier = 0.00274348
+Gmin = 0.00217953
+vernier = 0.00365797
+vernier = 0.0048773
+Gmin = 0.00215707
+vernier = 0.00650306
+vernier = 0.00867074
+Gmin = 0.00212174
+vernier = 0.011561
+Gmin = 0.00206733
+vernier = 0.0154146
+vernier = 0.0205529
+Gmin = 0.00197917
+vernier = 0.0274038
+vernier = 0.0365384
+Gmin = 0.00184647
+vernier = 0.0487178
+Gmin = 0.00165578
+vernier = 0.0649571
+vernier = 0.0866095
+Gmin = 0.00137979
+vernier = 0.115479
+vernier = 0.153972
+Gmin = 0.00103332
+vernier = 0.0769862
+vernier = 0.0384931
+vernier = 0.0192465
+Gmin = 0.000962299
+vernier = 0.00962327
+vernier = 0.00481163
+vernier = 0.00240582
+vernier = 0.00120291
+Gmin = 0.00096287
+vernier = 0.000601454
+vernier = 0.000451091
+Gmin = 0
+Gmin stepping failed
+
+Starting source stepping with srcstepmethod=0
+Source Step = 3.0303%
+vernier = 0.25
+Source Step = 1.70455%
+Source Step = 3.59848%
+Source Step = 5.49242%
+Source Step = 7.38636%
+Source Step = 9.2803%
+vernier = 0.09375
+Source Step = 11.9318%
+Source Step = 14.7727%
+Source Step = 17.6136%
+Source Step = 20.4545%
+Source Step = 23.2955%
+vernier = 0.140625
+Source Step = 27.1307%
+Source Step = 31.392%
+Source Step = 35.6534%
+Source Step = 39.9148%
+Source Step = 44.1761%
+vernier = 0.210938
+Source Step = 49.7159%
+Source Step = 56.108%
+Source Step = 62.5%
+Source Step = 68.892%
+Source Step = 75.2841%
+vernier = 0.316406
+Source Step = 83.2741%
+Source Step = 84.2517%
+Starting source stepping with srcstepmethod=1
+Source Step = 3.0303%
+Source Step = 18.1937%
+vernier = 0.000976562
+Source stepping failed
+
+Pseudo Transient failed in finding the operating point at 12.0842 ms.
+Trouble finding operating point....skipping operating point for Transient analysis.
+
+Simulation stopped by user.
+Total elapsed time: 51.606 seconds.
+
+Files loaded:
+C:\Users\Jorge Gonzalez\Desktop\EEG Project\08 SImulations\LTSpice\Simulation v3\eeg_inamp_testbench_v3.cir
+C:\Users\Jorge Gonzalez\Desktop\EEG Project\08 SImulations\LTSpice\Simulation v3\INA333.lib
+

@@ -1,0 +1,168 @@
+* =============================================================
+* EEG Instrumentation Amplifier Testbench  v3  – OpenEarable ExG
+* COSINA333MRB modelled as INA333 (TI functional equivalent)
+*
+* FIX-A REVERTED in v3:
+*   v2 used UIC to skip .op and force t=0 from .ic values directly.
+*   This INA333 model (Green-Williams-Lis architecture) has 100+
+*   internal nodes per instance (clamp/limiter "memory" nodes built
+*   from 1F caps + 1TΩ resistors, plus several VSWITCH elements for
+*   output clamping). None of those are covered by our .ic statements,
+*   so UIC forced all of them to 0V at t=0 — wildly inconsistent with
+*   a circuit biased at 1.65–3.3V. That is what caused the femtosecond
+*   timestep collapse / non-convergence (not a true rail latch).
+*
+*   v3 removes UIC. .op now runs normally, and per standard SPICE
+*   behavior the .ic statements below still help: with UIC absent,
+*   .ic values are FORCED on those nodes only during the .op search
+*   (like a strong .nodeset), then released for the transient. This
+*   gives the solver a good anchor on the testbench nodes while still
+*   letting it find a self-consistent answer for every internal
+*   macromodel node — which is what FIX-D's soft-start PWL was
+*   actually designed to assist in the first place.
+*
+*   GMIN restored to 1e-9 (was tightened to 1e-12 in v2) to give the
+*   .op solve more cushioning on this high-impedance circuit.
+*
+*  FIX-B  Output capacitors reduced: 2.2 µF removed, only 100 nF kept
+*         The 2.2 µF electrolytic is a PCB-level supply reservoir; the
+*         INA333 SPICE model is not characterised to drive that load.
+*         It caused phase-margin loss -> oscillation -> latch-up in sim.
+*         100 nF is sufficient to verify HF stability in simulation.
+*
+*  FIX-C  10 MΩ bias resistors from each output to VGND_1p65
+*         Give the .op solver a deterministic mid-rail path even if
+*         it does run (e.g. future re-use with startup). Negligible
+*         effect on signal (Rout_INA << 10 MΩ).
+*
+*  FIX-D  Soft-start PWL (gen_eeg_v2.py)
+*         All electrode voltages begin at exactly VGND (1.65 V) at t=0
+*         and ramp to their DC operating points over 20 ms. The .op
+*         therefore sees all nodes at 1.65 V — the INA has no incentive
+*         to latch toward either rail.
+*
+*  FIX-E  fs = 8 kHz (dt = 125 µs) in PWL files; MAXSTEP = 125u
+*         Better mains representation (160 pts/cycle at 50 Hz).
+*
+* =============================================================
+
+.param RG   = 2.2k
+.param GAIN = {1 + 100k/RG}          ; = 46.45×
+
+* ── Solver options ───────────────────────────────────────────────────────
+.options plotwinsize = 0              ; disable raw compression -> clean FFT
+.options MAXSTEP    = 125u           ; FIX-E: matches fs=8 kHz PWL interval
+.options ABSTOL     = 1e-9
+.options VNTOL      = 1e-6           ; 1 µV – resolves EEG-band signals
+.options RELTOL     = 0.001
+.options GMIN       = 1e-9            ; restored from v2's 1e-12 -> more convergence cushion
+
+* ── Model library ────────────────────────────────────────────────────────
+.include INA333.lib
+
+* ── Supplies ─────────────────────────────────────────────────────────────
+V3P3   V3P3       0   3.3
+VGND   VGND_1p65  0   1.65
+
+* ── Electrode sources (fs=8 kHz, soft-start, Tstop=5 s) ─────────────────
+* All files start at exactly 1.65 V (VGND) at t=0 (FIX-D).
+* Electrode1: +50 mV DC offset (ramped) + CM + mains + EEG 10 Hz + tone
+* Electrode2: -30 mV DC offset (ramped) + CM + mains + EMG 35 Hz
+* REF:         0 V offset + CM + mains + noise (no differential signal)
+VEL1      Electrode1  0   PWL file="eeg_electrode1.pwl"
+VEL2      Electrode2  0   PWL file="eeg_electrode2.pwl"
+VREF_src  REF_src     0   PWL file="eeg_ref.pwl"
+
+* Realistic REF source impedance – models electrode-skin contact
+R42   REF_src   REF   10Meg
+
+* =============================================================
+* CHANNEL 1  –  U9 (INA333 model for COSINA333MRB)
+* =============================================================
+* HPF corner: 1/(2π×330k×2.2n) ≈ 219 Hz — blocks DC offset, EEG passes flat
+* 1% R mismatch (R32 vs R29) is the dominant CMRR-limiting element
+
+R32   Electrode1  Vin1m   333k        ; +1% mismatch models resistor tolerance
+R29   REF         Vin1p   330k
+C10   Vin1m       Vin1p   2.2n        ; differential cap: RF CM rejection
+
+* INA subcircuit: IN+ IN- V+ V- OUT REF RG+ RG-
+XU9   Vin1p Vin1m V3P3 0 InAmp_out1 VGND_1p65 RG1A RG2A INA333
+R_G1  RG1A  RG2A  2.2k               ; gain = 1 + 100k/2.2k = 46.45×
+
+* FIX-B: 100 nF only (removed 2.2 µF which destabilised INA SPICE model)
+C28_cer   InAmp_out1  VGND_1p65  100n
+
+* FIX-C: 10 MΩ bias – deterministic mid-rail path for .op solver
+R_bias1   InAmp_out1  VGND_1p65  10Meg
+
+* FIX-A+D: with soft-start PWL, all nodes are at 1.65 V at t=0
+.ic V(Vin1p)=1.65  V(Vin1m)=1.65  V(InAmp_out1)=1.65
+
+* =============================================================
+* CHANNEL 2  –  U4 (INA333 model for COSINA333MRB)
+* =============================================================
+R37   Electrode2  Vin2m   330k
+R38   REF         Vin2p   327k        ; -1% mismatch on Ch2
+C7    Vin2m       Vin2p   2.2n
+
+XU4   Vin2p Vin2m V3P3 0 InAmp_out2 VGND_1p65 RG1B RG2B INA333
+R_G2  RG1B  RG2B  2.2k
+
+* FIX-B: 100 nF only
+C23_cer   InAmp_out2  VGND_1p65  100n
+
+* FIX-C: 10 MΩ bias
+R_bias2   InAmp_out2  VGND_1p65  10Meg
+
+.ic V(Vin2p)=1.65  V(Vin2m)=1.65  V(InAmp_out2)=1.65
+
+* =============================================================
+* SIMULATION — PRIMARY TRANSIENT (FFT)
+* =============================================================
+* v3: UIC removed. .op now runs first; .ic lines above still force
+* Vin1p/Vin1m/InAmp_outX during that search (released for the transient),
+* giving the solver a good starting guess without falsifying every
+* other node in the INA333 macromodel.
+* Tstop = 5 s  -> FFT Δf = 0.2 Hz
+* Tmax  = 125u -> matches fs=8 kHz PWL interval
+.tran 0 5.0 0 125u
+
+* ── HOW TO RUN THE FFT ───────────────────────────────────────────────────
+* 1. After simulation completes, click the waveform window
+* 2. Menu: View -> FFT  (or press Ctrl+Shift+F)
+* 3. Start time: 0.5 s  (skip 20 ms ramp + 480 ms settling)
+* 4. Window:     Hann
+* 5. Num points: 65536 (or maximum available)
+* 6. Probe:      V(InAmp_out1), V(InAmp_out2), V(Vin1m), V(Vin1p)
+*
+* Expected FFT results:
+*   InAmp_out1 @ 10 Hz  : ~-46 dBV  (alpha EEG × 46.45)
+*   InAmp_out2 @ 35 Hz  : ~-38 dBV  (EMG × 46.45)
+*   Both       @ 50 Hz  : ≥40 dB below signal peaks (mains rejection)
+*   Noise floor          : ~-120 dBV/√Hz
+
+* ── OPTIONAL: AC SWEEP (gain + phase, run separately) ───────────────────
+* Comment out .tran above, uncomment below, replace VEL1/VREF_src with AC:
+*   VEL1     Electrode1  0  AC 100u
+*   VREF_src REF_src     0  AC 0
+*.ac dec 100 0.1 1Meg
+
+* ── OPTIONAL: NOISE ANALYSIS (run separately) ────────────────────────────
+*.noise V(InAmp_out1) VEL1 dec 100 0.1 10k
+
+* =============================================================
+* PROBE GUIDE
+* =============================================================
+* Transient – zoom to t = 0.5 s to 5 s after simulation:
+*   V(InAmp_out1) : 1.65 V DC ± 8–12 mV signal (EEG at 10 Hz)
+*   V(InAmp_out2) : 1.65 V DC ± 12 mV signal (EMG at 35 Hz)
+*   V(Vin1m)      : ~1.65 V, DC offset blocked, tiny AC EEG visible
+*   V(Vin1p)      : ~1.65 V, CM only, no differential
+*
+* Settling check (zoom to t = 0 to 100 ms):
+*   All outputs should reach 1.65 V ± 50 mV within 50 ms
+*   No rail-to-rail excursions after t = 20 ms (end of soft-start ramp)
+
+.backanno
+.end
